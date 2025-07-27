@@ -1,0 +1,141 @@
+# PIPELINE DEFINITION
+# Name: yolov8-tests
+# Inputs:
+#    batch: int [Default: 8.0]
+#    data_pvc_name: str [Default: '']
+#    data_source: str [Default: '/data/yolo/fire-smoke/fire_smoke.yaml']
+#    imgsz: int [Default: 704.0]
+#    model_source: str [Default: 'yolov8n.pt']
+#    nb_epochs: int [Default: 2.0]
+#    output_pvc_name: str [Default: '']
+#    workers: int [Default: 8.0]
+components:
+  comp-train:
+    executorLabel: exec-train
+    inputDefinitions:
+      parameters:
+        batch:
+          parameterType: NUMBER_INTEGER
+        data_source:
+          parameterType: STRING
+        imgsz:
+          parameterType: NUMBER_INTEGER
+        model_source:
+          parameterType: STRING
+        nb_epochs:
+          parameterType: NUMBER_INTEGER
+        workers:
+          parameterType: NUMBER_INTEGER
+deploymentSpec:
+  executors:
+    exec-train:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - train
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet --no-warn-script-location 'kfp==2.7.0'\
+          \ '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"\
+          $0\" \"$@\"\n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          _KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\ndef train(model_source: str, data_source: str, nb_epochs: int, batch:\
+          \ int, imgsz: int, workers: int):\n    from ultralytics import YOLO\n  \
+          \  import datetime\n\n    # Train\n    model = YOLO(model_source)\n    train_res\
+          \ = model.train(data=data_source, project=\"/out\", epochs=nb_epochs, batch=batch,\
+          \ imgsz=imgsz, workers=workers, device='cpu')\n\n    # Eval \n    model.val()\n\
+          \n    pred_res = model.predict([\n        \"https://ultralytics.com/images/bus.jpg\"\
+          ,\n        \"https://www.leparisien.fr/resizer/1v3ZJD4C37t4OKlBOceFZq_iyaA=/932x582/arc-anglerfish-eu-central-1-prod-leparisien.s3.amazonaws.com/public/DH4LCERT3WCS2C4HE4OF6GKXCU.jpg\"\
+          \n        ])\n    for r in pred_res:\n        print(r.boxes)\n        r.save(filename=\"\
+          /out/{date:%Y-%m-%d_%H:%M:%S}.jpg\".format(date=datetime.datetime.now()))\n\
+          \n"
+        image: ultralytics/ultralytics
+        resources:
+          memoryLimit: 8.589934592
+pipelineInfo:
+  name: yolov8-tests
+root:
+  dag:
+    tasks:
+      train:
+        cachingOptions: {}
+        componentRef:
+          name: comp-train
+        inputs:
+          parameters:
+            batch:
+              componentInputParameter: batch
+            data_source:
+              componentInputParameter: data_source
+            imgsz:
+              componentInputParameter: imgsz
+            model_source:
+              componentInputParameter: model_source
+            nb_epochs:
+              componentInputParameter: nb_epochs
+            workers:
+              componentInputParameter: workers
+        taskInfo:
+          name: train
+  inputDefinitions:
+    parameters:
+      batch:
+        defaultValue: 8.0
+        isOptional: true
+        parameterType: NUMBER_INTEGER
+      data_pvc_name:
+        defaultValue: ''
+        isOptional: true
+        parameterType: STRING
+      data_source:
+        defaultValue: /data/yolo/fire-smoke/fire_smoke.yaml
+        isOptional: true
+        parameterType: STRING
+      imgsz:
+        defaultValue: 704.0
+        isOptional: true
+        parameterType: NUMBER_INTEGER
+      model_source:
+        defaultValue: yolov8n.pt
+        isOptional: true
+        parameterType: STRING
+      nb_epochs:
+        defaultValue: 2.0
+        isOptional: true
+        parameterType: NUMBER_INTEGER
+      output_pvc_name:
+        defaultValue: ''
+        isOptional: true
+        parameterType: STRING
+      workers:
+        defaultValue: 8.0
+        isOptional: true
+        parameterType: NUMBER_INTEGER
+schemaVersion: 2.1.0
+sdkVersion: kfp-2.7.0
+---
+platforms:
+  kubernetes:
+    deploymentSpec:
+      executors:
+        exec-train:
+          pvcMount:
+          - componentInputParameter: data_pvc_name
+            mountPath: /data
+          - componentInputParameter: output_pvc_name
+            mountPath: /out
