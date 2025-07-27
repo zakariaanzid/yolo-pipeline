@@ -10,13 +10,13 @@ spec:
   template:
     metadata:
       labels:
-        job-name: run-kubeflow-pipeline
+        job-name: run-yolo-pipeline
     spec:
       serviceAccountName: pipeline-runner-sa
       restartPolicy: Never
       containers:
         - name: pipeline-runner-container
-          image: zakariaanzid/kbfargo:latest
+          image: zakariaanzid/yolo:latest
           command: [python, /app/kbf-run.py]
           env:
             - name: KF_PIPELINES_SA_TOKEN_PATH
