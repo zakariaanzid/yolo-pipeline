@@ -25,7 +25,7 @@ run = client.create_run_from_pipeline_package(
         "output_pvc_name": "yolo-output-small"
     },
     run_name="yolo-train-small",
-    experiment_id="YOLO Experiments"
+    experiment_id=yolo_experiment["experiment_id"]
 )
 
 
