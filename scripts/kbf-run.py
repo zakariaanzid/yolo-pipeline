@@ -11,7 +11,7 @@ client = Client(
     existing_token=token
 )
 
-yolo_experiment = client.create_experiment(name="YOLO Experiments")
+yolo_experiment = client.create_experiment(name="YOLO Experiment")
 
 run = client.create_run_from_pipeline_package(
     pipeline_file="pipeline.yaml",
@@ -25,7 +25,7 @@ run = client.create_run_from_pipeline_package(
         "output_pvc_name": "yolo-output-small"
     },
     run_name="yolo-train-small",
-    experiment_id=yolo_experiment["experiment_id"]
+    experiment_id=yolo_experiment.experiment_id
 )
 
 
