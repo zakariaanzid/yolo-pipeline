@@ -4,7 +4,7 @@ WORKDIR /app
 
 COPY manifests/pipeline.yaml .
 COPY scripts/kbf-run.py . 
-RUN pip install kfp
+RUN pip install kfp==2.3.0
 
 #RUN apt-get update && apt-get install -y --no-install-recommends \
 #    curl vim iputils-ping net-tools \
